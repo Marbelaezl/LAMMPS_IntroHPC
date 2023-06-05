@@ -38,8 +38,10 @@ fix thermostat all langevin 5.0 5.0 0.1 $S
 #Termostato langevin. Posiblemente hay una mejor forma porque esto modela interacciones con solvente implícito
 timestep 0.0005
 
-dump 1 all movie 1000 prueba2.mp4 type type size 640 480
+dump 1 all movie 1000 MovieLMP.mp4 type type size 640 480
 dump 2 all atom 1000 dump.lammpsprj
+#dump mydmp3 all atom 20000 pvw*.dump #este dump se utiliza para visualizar en paraview (imprime muchos archivos)
+
 #dump movie como referencia, dump atom para VMD
 
 run 1000000
