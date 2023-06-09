@@ -7,59 +7,85 @@ boundary	f f f
 
 variable S 	equal 42
 #Seed para los comandos que la requieren
+
 region simulation_box block -60 60 -20 20 -20 20
 create_box 2 	simulation_box
-region m1  	block -58 -40 -18 18 -18 18 #open 1 open 2 open 3 open 4 open 5
-region m2 	block 40 58 -18 18 -18 18 #open 1 open 2 open 3 open 4 open 5
+region inicial1  	block -58 -40 -18 18 -18 18
+region inicial2 	block 40 58 -18 18 -18 18 
 #Se recortan las regiones porque de lo contrario minimize saca átomos de la caja
-create_atoms 	1 random 800 $S m1 overlap 1.0
-create_atoms 	2 random 1600 $S m2 overlap 1.0
-group g1 	region m1
-group g2	region m2
+create_atoms 	1 random 7000 $S inicial1 overlap 1.0
+create_atoms 	2 random 7000 $S inicial2 overlap 1.0
+group g1 	region inicial1
+group g2	region inicial2
 mass 		* 1
-pair_coeff	* * 1.0 2.0
+pair_coeff	* * 0.1 1.0
+#Se pone un parámetro de energía bajo en comparación con la velocidad para que el comportamiento sea más similar a un gas que a un líquido
 
 fix E_walls all wall/reflect xlo EDGE xhi EDGE ylo EDGE yhi EDGE zlo EDGE zhi EDGE units box
 #Muros ideales en todas las caras de la caja de simulación
-#fix M_wall all wall/reflect xlo 0.0 units box
 
 
 neighbor 10.0 bin
+#Este NO es el parámetro de listas de vecinos a modificar; solo actúa durante minimize para que no se pierdan átomos
 minimize 1.0e-4 1.0e-6 50 10000
-#unfix M_wall
 
-neighbor 1.0  bin
-neigh_modify every 1 delay 0 check yes
-#Parámetros de lista de vecinos. Modificar.
+neighbor 0.3  bin
+neigh_modify every 10 delay 0 check yes
+#Parámetros de lista de vecinos. Estos sí se deben modificar
 
 thermo 10000
+#Número de pasos entre impresiones a la pantalla
 
-variable p equal press
-variable C equal xcm(g1,x)
-variable num1 equal count(all,m1)
-variable num2 equal count(all,m2)
-variable CMX2 equal xcm(g2,x)
-variable M1 equal bound(g1,xmax)
-variable Min2 equal bound(g2,xmin)
-#TODO: Encontrar variables que muestren el comportamiento más adecuadamente
-print "particles in region 1: ${num1}"
-print "particles in region 2: ${num2}"
-fix gen_datos all print 1000 "${num1} $p $C ${CMX2}" file datos.txt screen no title "#v1 "
-#
+#Prueba 1: densidad local en función del tiempo. Se generan 6 regiones a lo largo de x. Esto se hace con un loop
+variable i loop 6
+label loopstart
+variable starti equal (-80+20*$i)
+variable endi equal (-60+20*$i)
+region b$i block  ${starti} ${endi} -20 20 -20 20
+#bloque i
+variable d$i equal count(all,b$i)
+#densidad en el bloque i
+next i
+jump in.2cajasv2 loopstart
 
+variable t equal time
+#Usada para las pruebas 1 y 2
+
+print "Distribución inicial de las partículas: ${d1} ${d2} ${d3} ${d4} ${d5} ${d6}"
+
+
+#Prueba 1: Evolución de la densidad local en función del tiempo
+fix densidades all print 2000 "$t ${d1} ${d2} ${d3} ${d4} ${d5} ${d6}" file densidades.txt screen no title "#t d1 d2 d3 d4 d5 d6"
+
+
+#Prueba 2: Ubicación de los centros de masa en función del tiempo
+variable cm1 equal xcm(g1,x)
+variable cm2 equal xcm(g2,x)
+variable vm1 equal vcm(g1,x)
+variable vm2 equal vcm(g2,x)
+fix gen_datos all print 2000 "$t ${cm1} ${vm1} ${cm2} ${vm2} " file cm.txt screen no title "#t XCM1 VCM1 XCM2 VCM2 "
+
+#Pruebas 3, 4 y 5: Distribución de las distancias, velocidades y energías
+shell mkdir PythonData
+dump pruebas345 all custom 2000 ./PythonData/dump.*.txt id type x y z vx vy vz
 
 thermo_style custom step time temp ke epair etotal press
-#Variables a imprimir. TODO: Definir y encontrar las otras
+
 
 fix integrator all nve
-velocity g1 create 10.0 $S dist gaussian
-velocity g2 create 5.0 $S dist gaussian
+velocity g1 create 5.0 $S dist gaussian
+velocity g2 create 10.0 $S dist gaussian
 run 0
 timestep 0.0005
 
-dump 1 all movie 100 MovieLMP.mp4 type type size 640 480
-dump 2 all atom 100 dump.lammpsprj
-#dump mydmp3 all atom 20000 pvw*.dump #este dump se utiliza para visualizar en paraview (imprime muchos archivos)
+dump 1 all movie 200 MovieLMP.mp4 type type size 640 480
+dump 2 all atom 200 dump.lammpsprj
 #dump movie como referencia, dump atom para VMD
+
+shell mkdir ParaviewData
+
+dump mydmp3 all atom 2000 ./ParaviewData/pvw*.dump
+#este dump se utiliza para visualizar en paraview (imprime muchos archivos)
+
 
 run 200000
