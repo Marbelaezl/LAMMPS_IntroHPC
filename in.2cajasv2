@@ -18,7 +18,7 @@ create_atoms 	2 random 7000 $S inicial2 overlap 1.0
 group g1 	region inicial1
 group g2	region inicial2
 mass 		* 1
-pair_coeff	* * 0.1 1.0
+pair_coeff	* * 0.5 1.0
 #Se pone un parámetro de energía bajo en comparación con la velocidad para que el comportamiento sea más similar a un gas que a un líquido
 
 fix E_walls all wall/reflect xlo EDGE xhi EDGE ylo EDGE yhi EDGE zlo EDGE zhi EDGE units box
@@ -27,7 +27,7 @@ fix E_walls all wall/reflect xlo EDGE xhi EDGE ylo EDGE yhi EDGE zlo EDGE zhi ED
 
 neighbor 10.0 bin
 #Este NO es el parámetro de listas de vecinos a modificar; solo actúa durante minimize para que no se pierdan átomos
-minimize 1.0e-4 1.0e-6 50 10000
+#minimize 1.0e-4 1.0e-6 50 10000
 
 neighbor 0.3  bin
 neigh_modify every 10 delay 0 check yes
@@ -63,18 +63,18 @@ variable cm1 equal xcm(g1,x)
 variable cm2 equal xcm(g2,x)
 variable vm1 equal vcm(g1,x)
 variable vm2 equal vcm(g2,x)
-fix gen_datos all print 2000 "$t ${cm1} ${vm1} ${cm2} ${vm2} " file cm.txt screen no title "#t XCM1 VCM1 XCM2 VCM2 "
+fix gen_datos all print 200 "$t ${cm1} ${vm1} ${cm2} ${vm2} " file cm.txt screen no title "#t XCM1 VCM1 XCM2 VCM2 "
 
 #Pruebas 3, 4 y 5: Distribución de las distancias, velocidades y energías
 shell mkdir PythonData
-dump pruebas345 all custom 2000 ./PythonData/dump.*.txt id type x y z vx vy vz
+dump pruebas345 all custom 200 ./PythonData/dump.*.txt id type x y z vx vy vz
 
 thermo_style custom step time temp ke epair etotal press
 
 
 fix integrator all nve
-velocity g1 create 5.0 $S dist gaussian
-velocity g2 create 10.0 $S dist gaussian
+velocity g1 create 5.0 $S dist uniform
+velocity g2 create 10.0 $S dist uniform
 run 0
 timestep 0.0005
 
